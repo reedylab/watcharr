@@ -1,0 +1,18 @@
+services:
+  watcharr:
+    build:
+      context: .
+    container_name: watcharr
+    restart: unless-stopped
+    ports:
+      - "5035:5035"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - watcharr-data:/app/data
+      - watcharr-logs:/app/logs
+    env_file:
+      - .env
+
+volumes:
+  watcharr-data:
+  watcharr-logs:
