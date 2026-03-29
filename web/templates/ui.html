@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Watcharr</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="/static/style.css?v=1" />
+</head>
+<body class="theme-dark">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">&#128065;</span>
+      <span>Watcharr</span>
+    </div>
+    <div class="header-actions">
+      <div class="header-group">
+        <span class="header-group-label">WATCHDOG</span>
+        <span id="status-badge" class="badge badge-stopped">Stopped</span>
+        <button id="start-btn" class="btn btn-primary btn-sm-header">Start</button>
+        <button id="stop-btn" class="btn btn-sm-header">Stop</button>
+        <span class="stat-pill" id="dht-pill" title="DHT Nodes">DHT: --</span>
+        <span class="stat-pill" id="stalled-pill" title="Stalled Torrents">Stalled: --</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Shell -->
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard">
+          <span class="nav-ic">&#128200;</span> Dashboard
+        </button>
+        <button class="nav-item" data-view="logs">
+          <span class="nav-ic">&#128220;</span> Logs
+        </button>
+        <button class="nav-item nav-item-parent" data-view="settings">
+          <span class="nav-ic">&#9881;</span> Settings
+          <span class="nav-arrow">&#9662;</span>
+        </button>
+        <div id="settings-subnav" class="nav-subnav">
+          <!-- Populated by JavaScript -->
+        </div>
+      </nav>
+      <div class="sidebar-info">
+        <div><strong>Container:</strong> <span id="sidebar-container">--</span></div>
+        <div><strong>Interval:</strong> <span id="sidebar-interval">--</span>s</div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="content">
+      <!-- DASHBOARD -->
+      <section id="view-dashboard" class="view visible">
+        <!-- Status cards -->
+        <div class="status-grid">
+          <div class="status-card">
+            <div class="status-card-header">
+              <h4>Watchdog Status</h4>
+              <span class="status-card-icon">&#128065;</span>
+            </div>
+            <div class="status-card-value" id="card-status">Stopped</div>
+            <div class="status-card-sub" id="card-uptime">--</div>
+          </div>
+          <div class="status-card">
+            <div class="status-card-header">
+              <h4>DHT Nodes</h4>
+              <span class="status-card-icon">&#127760;</span>
+            </div>
+            <div class="status-card-value" id="card-dht">--</div>
+            <div class="status-card-sub" id="card-dht-sub">Peer discovery network</div>
+          </div>
+          <div class="status-card">
+            <div class="status-card-header">
+              <h4>Stalled Torrents</h4>
+              <span class="status-card-icon">&#9888;</span>
+            </div>
+            <div class="status-card-value" id="card-stalled">--</div>
+            <div class="status-card-sub" id="card-restarts">Restarts: --</div>
+          </div>
+        </div>
+
+        <!-- Recent Events -->
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Recent Events</h3>
+            <div class="panel-actions">
+              <button id="refresh-events" class="btn btn-ghost">Refresh</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Event</th>
+                  <th>Message</th>
+                  <th>Torrent</th>
+                </tr>
+              </thead>
+              <tbody id="events-body">
+                <tr><td colspan="4" class="empty-state">No events yet</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Active Torrents -->
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Active Torrents</h3>
+            <div class="panel-actions">
+              <button id="refresh-torrents" class="btn btn-ghost">Refresh</button>
+              <button id="restart-qbit-btn" class="btn btn-danger btn-sm-header">Restart qBit</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>State</th>
+                  <th>Progress</th>
+                  <th>DL Speed</th>
+                  <th>Seeds</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="torrents-body">
+                <tr><td colspan="6" class="empty-state">Not connected</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- LOGS -->
+      <section id="view-logs" class="view">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Recent Logs</h3>
+            <div class="panel-actions">
+              <button id="clear-log" class="btn btn-ghost">Clear View</button>
+            </div>
+          </div>
+          <div class="log-container">
+            <pre id="log-output"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="view-settings" class="view">
+        <div class="settings-panel">
+          <div class="settings-main">
+            <div class="settings-header">
+              <h2 id="settings-section-title">Settings</h2>
+              <div class="settings-actions">
+                <span id="settings-status" class="settings-status"></span>
+                <button id="save-settings" type="button" class="btn btn-primary">Save</button>
+              </div>
+            </div>
+            <div id="settings-container" class="settings-content">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    window.API_BASE = "{{ api_base | default('/api') }}";
+  </script>
+  <script src="/static/ui.js?v=1"></script>
+</body>
+</html>
