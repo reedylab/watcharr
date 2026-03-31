@@ -1,11 +1,11 @@
-"""Tests for the Flask API endpoints and auth."""
+"""Tests for the FastAPI endpoints and auth."""
 
 import os
 import sys
 import base64
-import tempfile
 from unittest.mock import patch, MagicMock
 import pytest
+from starlette.testclient import TestClient
 
 
 @pytest.fixture(autouse=True)
@@ -15,8 +15,7 @@ def clean_env(tmp_path):
         os.environ.pop(key, None)
     os.environ["LOG_FILE"] = str(tmp_path / "watcharr.log")
     os.environ["SETTINGS_FILE"] = str(tmp_path / "settings.json")
-    # Force reimport of web modules to pick up new env (auth is set in create_app)
-    # Keep core.* modules intact so other test files can patch them reliably
+    # Force reimport of web modules to pick up new env (auth reads at import time)
     for mod in list(sys.modules):
         if mod.startswith("web"):
             del sys.modules[mod]
@@ -29,33 +28,24 @@ def clean_env(tmp_path):
 
 
 @pytest.fixture
-def app():
-    """Create app without auth."""
-    from web import create_app
-    app = create_app()
-    app.config["TESTING"] = True
-    return app
+def client():
+    """Create TestClient without auth."""
+    from web.app import app
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture
-def client(app):
-    return app.test_client()
-
-
-@pytest.fixture
-def auth_app():
-    """Create app with auth enabled."""
+def auth_client():
+    """Create TestClient with auth enabled."""
     os.environ["AUTH_USERNAME"] = "testuser"
     os.environ["AUTH_PASSWORD"] = "testpass"
-    from web import create_app
-    app = create_app()
-    app.config["TESTING"] = True
-    return app
-
-
-@pytest.fixture
-def auth_client(auth_app):
-    return auth_app.test_client()
+    for mod in list(sys.modules):
+        if mod.startswith("web"):
+            del sys.modules[mod]
+    from web.app import app
+    with TestClient(app) as c:
+        yield c
 
 
 def _basic_auth_header(user, password):
@@ -69,7 +59,7 @@ class TestHealth:
     def test_health_ok(self, client):
         r = client.get("/api/health")
         assert r.status_code == 200
-        assert r.get_json()["status"] == "ok"
+        assert r.json()["status"] == "ok"
 
     def test_health_bypasses_auth(self, auth_client):
         r = auth_client.get("/api/health")
@@ -105,7 +95,7 @@ class TestAuth:
 class TestStatusEndpoint:
     def test_status_returns_fields(self, client):
         r = client.get("/api/status")
-        data = r.get_json()
+        data = r.json()
         assert "running" in data
         assert "dht_nodes" in data
         assert "stalled_count" in data
@@ -115,7 +105,7 @@ class TestStatusEndpoint:
         assert r.status_code == 200
         # Verify running
         r = client.get("/api/status")
-        assert r.get_json()["running"] is True
+        assert r.json()["running"] is True
         # Stop
         r = client.post("/api/stop")
         assert r.status_code == 200
@@ -127,7 +117,7 @@ class TestEventsEndpoint:
     def test_events_returns_list(self, client):
         r = client.get("/api/events")
         assert r.status_code == 200
-        assert isinstance(r.get_json(), list)
+        assert isinstance(r.json(), list)
 
 
 # ---- Settings ----
@@ -136,11 +126,11 @@ class TestSettingsEndpoint:
     def test_get_settings(self, client):
         r = client.get("/api/settings")
         assert r.status_code == 200
-        data = r.get_json()
+        data = r.json()
         assert "schema" in data
         assert "values" in data
 
     def test_post_invalid_key(self, client):
         r = client.post("/api/settings", json={"NONEXISTENT_KEY": "value"})
         assert r.status_code == 200
-        assert r.get_json()["message"] == "No changes."
+        assert r.json()["message"] == "No changes."
