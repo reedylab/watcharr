@@ -218,7 +218,7 @@ watcharr/
 ├── .github/workflows/ci.yml   # GitHub Actions CI
 ├── docker-compose.yml          # Container orchestration
 ├── Dockerfile                  # Python 3.11-slim image
-├── entrypoint.sh               # Creates data/log dirs, starts gunicorn
+├── entrypoint.sh               # Creates data/log dirs, starts uvicorn
 ├── requirements.txt            # Python dependencies
 ├── .env.example                # Environment template (safe to commit)
 ├── VERSION                     # Semantic version
@@ -230,12 +230,10 @@ watcharr/
 │   └── watchdog.py             # WatchdogThread: monitoring loop + recovery logic
 │
 ├── web/
-│   ├── __init__.py              # Flask app factory, auth middleware, watchdog lifecycle
-│   ├── app.py                   # WSGI entry point for gunicorn
-│   ├── gunicorn.config.py       # Server config: port 5035, 1 worker, 4 threads
-│   ├── blueprints/
-│   │   ├── api.py               # REST API endpoints + settings schema + health check
-│   │   └── ui.py                # Serves the single-page dashboard
+│   ├── __init__.py              # Package marker
+│   ├── app.py                   # FastAPI app, lifespan, all routes
+│   ├── auth.py                  # Basic Auth dependency (optional)
+│   ├── shared_state.py          # Watchdog global + settings schema
 │   ├── templates/
 │   │   └── ui.html              # Dashboard HTML shell
 │   └── static/
@@ -244,7 +242,7 @@ watcharr/
 │
 └── tests/
     ├── test_watchdog.py         # Core watchdog logic tests
-    └── test_api.py              # Flask API + auth tests
+    └── test_api.py              # API + auth tests
 ```
 
 ---
@@ -268,7 +266,7 @@ export QB_PASSWORD="your-password"
 export QB_CONTAINER="qbittorrent"
 
 # Start the development server
-gunicorn -c web/gunicorn.config.py web.app:app
+uvicorn web.app:app --host 0.0.0.0 --port 5035 --workers 1
 ```
 
 The dashboard will be available at `http://localhost:5035`.
