@@ -36,3 +36,9 @@ logs/
 *.log
 *.sqlite
 *.db
+
+# Local planning / scratch notes
+planning/
+
+# Local compose file — copy docker-compose.yml.example to docker-compose.yml
+docker-compose.yml

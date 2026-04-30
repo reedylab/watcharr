@@ -7,7 +7,9 @@ services:
     ports:
       - "5035:5035"
     volumes:
+      # Required: lets Watcharr restart your qBittorrent container when recovery is needed
       - /var/run/docker.sock:/var/run/docker.sock
+      # Persists settings (web UI changes) and log files across container restarts
       - watcharr-data:/app/data
       - watcharr-logs:/app/logs
     env_file:
